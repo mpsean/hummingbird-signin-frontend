@@ -22,7 +22,7 @@ export default function DashboardPage() {
       <nav className={styles.nav}>
         <div className={styles.navBrand}>
           <span className={styles.brandIcon}>⬡</span>
-          <span>Nexus</span>
+          <span>Hummingbird</span>
         </div>
         <div className={styles.navRight}>
           <div className={styles.avatar}>{initials}</div>
