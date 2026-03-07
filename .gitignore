@@ -39,3 +39,9 @@ pnpm-debug.log*
 
 # Vite
 vite.config.ts
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
