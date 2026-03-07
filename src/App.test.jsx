@@ -1,8 +1,14 @@
+/** @vitest-environment jsdom */
+
 import { render, screen } from '@testing-library/react';
+import { test, expect } from 'vitest';
 import App from './App';
 
-test('renders learn react link', () => {
+test('renders login page for unauthenticated users', async () => {
+  localStorage.clear();
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(await screen.findByText(/welcome back/i)).toBeTruthy();
+  expect(screen.getByText(/sign in to your account/i)).toBeTruthy();
+  expect(screen.getByRole('button', { name: /sign in/i })).toBeTruthy();
+  expect(screen.getByRole('link', { name: /create one/i })).toBeTruthy();
 });
