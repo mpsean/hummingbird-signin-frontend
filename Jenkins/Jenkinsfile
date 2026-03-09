@@ -2,23 +2,34 @@ pipeline {
     agent any
     environment {
         CI = 'true'
+        DOCKER_IMAGE = 'mpsean/hummingbird-signin-frontend'
     }
     stages {
-        stage('Build') {
+        stage('Install Dependencies') {
             steps {
                 sh 'npm install'
             }
         }
         stage('Test') {
             steps {
-                sh './Jenkins/scripts/test.sh'
+                sh './jenkins/scripts/test.sh'
             }
         }
-        stage('Deliver') {
+        stage('Build Application') {
             steps {
-                sh './Jenkins/scripts/deliver.sh'
-                input message: 'Finished using the web site? (Click "Proceed" to continue)'
-                sh './Jenkins/scripts/kill.sh'
+                sh 'npm run build'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -f .Dockerfile -t ${DOCKER_IMAGE}:${BUILD_NUMBER} -t ${DOCKER_IMAGE}:latest .'
+            }
+        }
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_TOKEN')]) {
+                    sh './jenkins/scripts/deliver.sh'
+                }
             }
         }
     }
