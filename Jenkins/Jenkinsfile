@@ -12,7 +12,7 @@ pipeline {
         }
         stage('Test') {
             steps {
-                sh './jenkins/scripts/test.sh'
+                sh './Jenkins/scripts/test.sh'
             }
         }
         stage('Build Application') {
@@ -28,7 +28,7 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_TOKEN')]) {
-                    sh './jenkins/scripts/deliver.sh'
+                    sh './Jenkins/scripts/deliver.sh'
                 }
             }
         }
