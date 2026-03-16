@@ -1,8 +1,6 @@
 pipeline {
     agent any
 
-    tools { nodejs "nodejs" }
-
     environment {
         CI = 'true'
         DOCKER_IMAGE = 'mpsean/hummingbird-signin-frontend'
@@ -10,56 +8,17 @@ pipeline {
     stages {
         stage('Install Dependencies') {
             steps {
-                sh '''#!/bin/sh
-set -e
-
-install_with_apt() {
-    if command -v sudo >/dev/null 2>&1; then
-        sudo apt-get update && sudo apt-get install -y libatomic1
-    else
-        apt-get update && apt-get install -y libatomic1
-    fi
-}
-
-install_with_yum() {
-    if command -v sudo >/dev/null 2>&1; then
-        sudo yum install -y libatomic
-    else
-        yum install -y libatomic
-    fi
-}
-
-install_with_dnf() {
-    if command -v sudo >/dev/null 2>&1; then
-        sudo dnf install -y libatomic
-    else
-        dnf install -y libatomic
-    fi
-}
-
-if command -v apt-get >/dev/null 2>&1; then
-    install_with_apt
-elif command -v yum >/dev/null 2>&1; then
-    install_with_yum
-elif command -v dnf >/dev/null 2>&1; then
-    install_with_dnf
-else
-    echo "Unsupported package manager. Install libatomic manually on the Jenkins agent."
-    exit 1
-fi
-
-npm ci
-'''
+                sh 'docker run --rm --user "$(id -u):$(id -g)" -e CI=${CI} -v "$PWD":/app -w /app node:20-bookworm npm ci'
             }
         }
         stage('Test') {
             steps {
-                sh './jenkins/scripts/test.sh'
+                sh 'docker run --rm --user "$(id -u):$(id -g)" -e CI=${CI} -v "$PWD":/app -w /app node:20-bookworm sh ./jenkins/scripts/test.sh'
             }
         }
         stage('Build Application') {
             steps {
-                sh 'npm run build'
+                sh 'docker run --rm --user "$(id -u):$(id -g)" -e CI=${CI} -v "$PWD":/app -w /app node:20-bookworm npm run build'
             }
         }
         stage('Build Docker Image') {
