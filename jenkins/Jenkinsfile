@@ -38,24 +38,25 @@ if [ ! -x "${NODE_HOME}/bin/node" ]; then
   rm -f .ci/node.tar.gz
 fi
 
-"${NODE_HOME}/bin/node" -v
-"${NODE_HOME}/bin/npm" -v
+export PATH="${NODE_HOME}/bin:${PATH}"
+node -v
+npm -v
 '''
             }
         }
         stage('Install Dependencies') {
             steps {
-                sh 'PATH="$PWD/.ci/node/bin:$PATH" npm ci'
+                sh 'export PATH="$PWD/.ci/node/bin:$PATH" && npm ci'
             }
         }
         stage('Test') {
             steps {
-                sh 'PATH="$PWD/.ci/node/bin:$PATH" sh ./jenkins/scripts/test.sh'
+                sh 'export PATH="$PWD/.ci/node/bin:$PATH" && sh ./jenkins/scripts/test.sh'
             }
         }
         stage('Build Application') {
             steps {
-                sh 'PATH="$PWD/.ci/node/bin:$PATH" npm run build'
+                sh 'export PATH="$PWD/.ci/node/bin:$PATH" && npm run build'
             }
         }
         stage('Build Docker Image') {
