@@ -4,24 +4,58 @@ pipeline {
     environment {
         CI = 'true'
         DOCKER_IMAGE = 'mpsean/hummingbird-signin-frontend'
-        DOCKER_HOST = 'unix:///var/run/docker.sock'
-        DOCKER_TLS_VERIFY = ''
-        DOCKER_CERT_PATH = ''
     }
     stages {
+        stage('Setup Node Runtime') {
+            steps {
+                sh '''#!/bin/sh
+set -e
+
+ARCH="$(uname -m)"
+case "${ARCH}" in
+  x86_64) NODE_ARCH='x64' ;;
+  aarch64|arm64) NODE_ARCH='arm64' ;;
+  *)
+    echo "Unsupported architecture: ${ARCH}" >&2
+    exit 1
+    ;;
+esac
+
+mkdir -p .ci
+NODE_HOME="$PWD/.ci/node"
+
+if [ ! -x "${NODE_HOME}/bin/node" ]; then
+  NODE_FILE="$(curl -fsSL https://nodejs.org/dist/latest-v20.x/SHASUMS256.txt | awk -v arch="${NODE_ARCH}" '$2 ~ ("linux-" arch "\\.tar\\.xz$") {print $2; exit}')"
+  if [ -z "${NODE_FILE}" ]; then
+    echo 'Unable to resolve Node.js download filename.' >&2
+    exit 1
+  fi
+
+  curl -fsSL "https://nodejs.org/dist/latest-v20.x/${NODE_FILE}" -o .ci/node.tar.xz
+  rm -rf "${NODE_HOME}"
+  mkdir -p "${NODE_HOME}"
+  tar -xJf .ci/node.tar.xz --strip-components=1 -C "${NODE_HOME}"
+  rm -f .ci/node.tar.xz
+fi
+
+"${NODE_HOME}/bin/node" -v
+"${NODE_HOME}/bin/npm" -v
+'''
+            }
+        }
         stage('Install Dependencies') {
             steps {
-                sh 'docker run --rm --user "$(id -u):$(id -g)" -e CI=${CI} -v "$PWD":/app -w /app node:20-bookworm npm ci'
+                sh 'PATH="$PWD/.ci/node/bin:$PATH" npm ci'
             }
         }
         stage('Test') {
             steps {
-                sh 'docker run --rm --user "$(id -u):$(id -g)" -e CI=${CI} -v "$PWD":/app -w /app node:20-bookworm sh ./jenkins/scripts/test.sh'
+                sh 'PATH="$PWD/.ci/node/bin:$PATH" sh ./jenkins/scripts/test.sh'
             }
         }
         stage('Build Application') {
             steps {
-                sh 'docker run --rm --user "$(id -u):$(id -g)" -e CI=${CI} -v "$PWD":/app -w /app node:20-bookworm npm run build'
+                sh 'PATH="$PWD/.ci/node/bin:$PATH" npm run build'
             }
         }
         stage('Build Docker Image') {
