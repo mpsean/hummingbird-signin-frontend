@@ -4,6 +4,7 @@ pipeline {
     environment {
         CI = 'true'
         DOCKER_IMAGE = 'mpsean/hummingbird-signin-frontend'
+        DOCKER_HOST = 'unix:///var/run/docker.sock'
     }
     stages {
         stage('Setup Node Runtime') {
