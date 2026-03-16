@@ -1,5 +1,9 @@
 pipeline {
     agent any
+
+    options {
+        skipDefaultCheckout(true)
+    }
     
     environment {
         CI = 'true'
@@ -7,6 +11,12 @@ pipeline {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
     }
     stages {
+        stage('Checkout Source') {
+            steps {
+                deleteDir()
+                checkout scm
+            }
+        }
         stage('Setup Node Runtime') {
             steps {
                 sh '''#!/bin/sh
