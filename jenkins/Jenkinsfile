@@ -3,6 +3,7 @@ pipeline {
 
     parameters {
         string(name: 'DOCKER_CREDENTIALS_ID', defaultValue: 'dockerhub-credentials', description: 'Jenkins Username/Password credentials ID for Docker Hub')
+        string(name: 'DOCKER_IMAGE', defaultValue: 'mpsean/hummingbird-signin-frontend', description: 'Docker image repository (e.g. username/repository)')
     }
 
     options {
@@ -11,7 +12,7 @@ pipeline {
     
     environment {
         CI = 'true'
-        DOCKER_IMAGE = 'mpsean/hummingbird-signin-frontend'
+        DOCKER_IMAGE = "${params.DOCKER_IMAGE}"
         DOCKER_HOST = 'unix:///var/run/docker.sock'
     }
     stages {
