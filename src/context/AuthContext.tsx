@@ -5,13 +5,7 @@ interface AuthCtx {
   user: User | null
   loading: boolean
   login: (emailOrUsername: string, password: string) => Promise<void>
-  register: (data: RegisterData) => Promise<void>
   logout: () => void
-}
-
-interface RegisterData {
-  email: string; username: string; password: string;
-  firstName?: string; lastName?: string
 }
 
 const AuthContext = createContext<AuthCtx | null>(null)
@@ -35,19 +29,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(data.user)
   }
 
-  const register = async (data: RegisterData) => {
-    const { data: res } = await authApi.register(data)
-    localStorage.setItem('token', res.token)
-    setUser(res.user)
-  }
-
   const logout = () => {
     localStorage.removeItem('token')
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

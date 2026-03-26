@@ -1,5 +1,5 @@
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import styles from './Dashboard.module.css'
 
 export default function DashboardPage() {
@@ -21,7 +21,7 @@ export default function DashboardPage() {
 
       <nav className={styles.nav}>
         <div className={styles.navBrand}>
-          <span className={styles.brandIcon}>⬡</span>
+          <span className={styles.brandIcon}>HM</span>
           <span>Hummingbird</span>
         </div>
         <div className={styles.navRight}>
@@ -37,6 +37,40 @@ export default function DashboardPage() {
             {user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : user?.username}
           </h1>
         </div>
+
+        {user?.role === 'admin' ? (
+          <div className={styles.adminActions}>
+            <Link to="/admin/add-user" className={styles.adminActionBtn}>
+              <div className={styles.navBrand}>
+                <span className={styles.brandIcon}>HM</span>
+                <span>Hummingbird</span>
+              </div>
+              <span className={styles.adminActionLabel}>Add user →</span>
+            </Link>
+            <Link to="/admin/remove-user" className={`${styles.adminActionBtn} ${styles.adminActionBtnDanger}`}>
+              <div className={styles.navBrand}>
+                <span className={styles.brandIcon}>HM</span>
+                <span>Hummingbird</span>
+              </div>
+              <span className={styles.adminActionLabel}>Remove user →</span>
+            </Link>
+            <Link to="/admin/create-tenant" className={styles.adminActionBtn}>
+              <div className={styles.navBrand}>
+                <span className={styles.brandIcon}>HM</span>
+                <span>Hummingbird</span>
+              </div>
+              <span className={styles.adminActionLabel}>New tenant →</span>
+            </Link>
+          </div>
+        ) : (
+          <a href="https://www.hmmingbird.xyz/home" target="_blank" rel="noreferrer" className={styles.appBtn}>
+            <div className={styles.navBrand}>
+              <span className={styles.brandIcon}>HM</span>
+              <span>Hummingbird</span>
+            </div>
+            <span className={styles.appBtnLabel}>Open app →</span>
+          </a>
+        )}
 
         <div className={styles.grid}>
           <div className={styles.profileCard}>

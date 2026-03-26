@@ -11,7 +11,7 @@
   display: flex; align-items: center; justify-content: space-between;
   padding: 1.25rem 2.5rem;
   border-bottom: 1px solid var(--border);
-  background: rgba(10,10,15,0.8);
+  background: rgba(255,255,255,0.85);
   backdrop-filter: blur(12px);
 }
 
@@ -35,6 +35,21 @@
   font-size: 0.8rem; font-weight: 700; color: white;
 }
 
+.addUserBtn {
+  background: transparent;
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 8px;
+  padding: 0.4rem 1rem;
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  transition: all 0.2s;
+}
+.addUserBtn:hover {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: var(--accent);
+}
+
 .logoutBtn {
   background: transparent;
   border: 1px solid var(--border);
@@ -49,13 +64,79 @@
 .logoutBtn:hover {
   border-color: var(--border-hover);
   color: var(--text);
-  background: rgba(255,255,255,0.04);
+  background: rgba(0,0,0,0.04);
 }
 
 .main {
   position: relative; z-index: 1;
   max-width: 1000px; margin: 0 auto;
   padding: 3rem 2rem;
+}
+
+.adminActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 700px) { .adminActions { grid-template-columns: 1fr; } }
+
+.adminActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1.25rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.adminActionBtn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  color: var(--text);
+}
+
+.adminActionBtnDanger:hover {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
+}
+
+.adminActionLabel {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
+}
+.adminActionBtnDanger .adminActionLabel {
+  color: #ef4444;
+}
+
+.appBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1.5rem;
+  text-decoration: none;
+  color: var(--text);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.appBtn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+  color: var(--text);
+}
+
+.appBtnLabel {
+  font-size: 0.85rem;
+  color: var(--accent);
+  font-weight: 500;
 }
 
 .heroText { margin-bottom: 2.5rem; }
@@ -98,9 +179,9 @@
 
 .badge {
   font-size: 0.75rem; font-weight: 600;
-  background: rgba(108,99,255,0.15);
+  background: rgba(37,99,235,0.1);
   color: var(--accent);
-  border: 1px solid rgba(108,99,255,0.25);
+  border: 1px solid rgba(37,99,235,0.2);
   border-radius: 6px;
   padding: 0.2rem 0.6rem;
   text-transform: uppercase;
@@ -113,7 +194,7 @@
   display: block;
   font-family: var(--mono);
   font-size: 0.7rem;
-  background: rgba(255,255,255,0.03);
+  background: #f8fafc;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;

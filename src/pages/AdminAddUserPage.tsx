@@ -1,15 +1,14 @@
 import { useState, FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { Link } from 'react-router-dom'
+import { authApi } from '../services/authApi'
 import styles from './Auth.module.css'
 
-export default function RegisterPage() {
-  const { register } = useAuth()
-  const navigate = useNavigate()
+export default function AdminAddUserPage() {
   const [form, setForm] = useState({
     email: '', username: '', password: '', firstName: '', lastName: ''
   })
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -18,12 +17,14 @@ export default function RegisterPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
+    setSuccess('')
     setLoading(true)
     try {
-      await register(form)
-      navigate('/dashboard')
+      await authApi.register(form)
+      setSuccess(`User "${form.username}" created successfully.`)
+      setForm({ email: '', username: '', password: '', firstName: '', lastName: '' })
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed.')
+      setError(err.response?.data?.message || 'Failed to create user.')
     } finally {
       setLoading(false)
     }
@@ -37,16 +38,17 @@ export default function RegisterPage() {
 
       <div className={styles.card}>
         <div className={styles.brand}>
-          <div className={styles.brandIcon}>⬡</div>
-          <span className={styles.brandName}>Nexus</span>
+          <div className={styles.brandIcon}>HM</div>
+          <span className={styles.brandName}>Hummingbird</span>
         </div>
 
         <div className={styles.header}>
-          <h1 className={styles.title}>Create account</h1>
-          <p className={styles.subtitle}>Get started for free</p>
+          <h1 className={styles.title}>Add user</h1>
+          <p className={styles.subtitle}>Admin — create a new account</p>
         </div>
 
         {error && <div className={styles.errorBanner}>{error}</div>}
+        {success && <div className={styles.successBanner}>{success}</div>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.row}>
@@ -64,14 +66,14 @@ export default function RegisterPage() {
 
           <div className={styles.field}>
             <label className={styles.label}>Email</label>
-            <input className={styles.input} type="email" placeholder="you@company.com"
-              value={form.email} onChange={set('email')} required autoComplete="email" />
+            <input className={styles.input} type="email" placeholder="user@company.com"
+              value={form.email} onChange={set('email')} required autoComplete="off" />
           </div>
 
           <div className={styles.field}>
             <label className={styles.label}>Username</label>
             <input className={styles.input} type="text" placeholder="johndoe"
-              value={form.username} onChange={set('username')} required autoComplete="username" />
+              value={form.username} onChange={set('username')} required autoComplete="off" />
           </div>
 
           <div className={styles.field}>
@@ -82,12 +84,12 @@ export default function RegisterPage() {
           </div>
 
           <button className={styles.btn} type="submit" disabled={loading}>
-            {loading ? <span className={styles.spinner} /> : 'Create account'}
+            {loading ? <span className={styles.spinner} /> : 'Create user'}
           </button>
         </form>
 
         <p className={styles.footer}>
-          Already have an account? <Link to="/login">Sign in</Link>
+          <Link to="/dashboard">Back to dashboard</Link>
         </p>
       </div>
     </div>

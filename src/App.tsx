@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
+import AdminAddUserPage from './pages/AdminAddUserPage'
+import AdminRemoveUserPage from './pages/AdminRemoveUserPage'
+import AdminCreateTenantPage from './pages/AdminCreateTenantPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -14,6 +16,14 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   if (loading) return <LoadingScreen />
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>
+}
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth()
+  if (loading) return <LoadingScreen />
+  if (!user) return <Navigate to="/login" replace />
+  if (user.role !== 'admin') return <Navigate to="/dashboard" replace />
+  return <>{children}</>
 }
 
 function LoadingScreen() {
@@ -40,8 +50,10 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/admin/add-user" element={<AdminRoute><AdminAddUserPage /></AdminRoute>} />
+          <Route path="/admin/remove-user" element={<AdminRoute><AdminRemoveUserPage /></AdminRoute>} />
+          <Route path="/admin/create-tenant" element={<AdminRoute><AdminCreateTenantPage /></AdminRoute>} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

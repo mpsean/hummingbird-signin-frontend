@@ -18,7 +18,7 @@ api.interceptors.response.use(
   err => {
     if (err.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
+      //window.location.href = '/login'
     }
     return Promise.reject(err)
   }
@@ -55,6 +55,12 @@ export const authApi = {
 
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.post('/auth/change-password', data),
+
+  deleteUser: (username: string) =>
+    api.delete(`/users/${username}`),
+
+  createTenant: (data: { slug: string; name: string; frontendUrl: string }) =>
+    api.post('/tenants', data),
 }
 
 export default api

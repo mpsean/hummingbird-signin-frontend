@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import styles from './Auth.module.css'
 
@@ -19,7 +19,7 @@ export default function LoginPage() {
       await login(identifier, password)
       navigate('/dashboard')
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Please try again.')
+      setError(err.response?.data?.message || 'Login failed. Please try again.')                              
     } finally {
       setLoading(false)
     }
@@ -33,8 +33,8 @@ export default function LoginPage() {
 
       <div className={styles.card}>
         <div className={styles.brand}>
-          <div className={styles.brandIcon}>⬡</div>
-          <span className={styles.brandName}>Nexus</span>
+          <div className={styles.brandIcon}>HM</div>
+          <span className={styles.brandName}>Hummingbird</span>
         </div>
 
         <div className={styles.header}>
@@ -61,7 +61,6 @@ export default function LoginPage() {
           <div className={styles.field}>
             <label className={styles.label}>
               Password
-              <a href="#" className={styles.forgotLink}>Forgot?</a>
             </label>
             <input
               className={styles.input}
@@ -79,10 +78,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className={styles.footer}>
-          Don't have an account?{' '}
-          <Link to="/register">Create one</Link>
-        </p>
       </div>
     </div>
   )
