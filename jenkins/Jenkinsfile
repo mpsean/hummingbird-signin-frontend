@@ -4,6 +4,8 @@ pipeline {
     parameters {
         string(name: 'DOCKER_CREDENTIALS_ID', defaultValue: 'dockerhub-credentials', description: 'Jenkins Username/Password credentials ID for Docker Hub')
         string(name: 'DOCKER_IMAGE', defaultValue: 'pemapol/hummingbird-signin-frontend', description: 'Docker image repository (e.g. username/repository)')
+        string(name: 'GIT_REPO_URL', defaultValue: 'https://github.com/mpsean/hummingbird-signin-frontend.git', description: 'Git repository URL for Kaniko build context')
+        string(name: 'GIT_REF', defaultValue: 'master', description: 'Git branch or ref to build')
     }
 
     options {
@@ -17,7 +19,6 @@ pipeline {
     environment {
         CI = 'true'
         DOCKER_IMAGE = "${params.DOCKER_IMAGE}"
-        DOCKER_HOST = 'unix:///var/run/docker.sock'
     }
     stages {
         stage('Checkout Source') {
@@ -64,6 +65,34 @@ npm -v
 '''
             }
         }
+            stage('Setup Kubectl') {
+                steps {
+                sh '''#!/bin/sh
+set -e
+
+ARCH="$(uname -m)"
+case "${ARCH}" in
+    x86_64) K_ARCH='amd64' ;;
+    aarch64|arm64) K_ARCH='arm64' ;;
+    *)
+        echo "Unsupported architecture for kubectl: ${ARCH}" >&2
+        exit 1
+        ;;
+esac
+
+mkdir -p .ci/kubectl/bin
+
+if [ ! -x .ci/kubectl/bin/kubectl ]; then
+    K_VER="$(curl -fsSL https://dl.k8s.io/release/stable.txt)"
+    curl -fsSL "https://dl.k8s.io/release/${K_VER}/bin/linux/${K_ARCH}/kubectl" -o .ci/kubectl/bin/kubectl
+    chmod +x .ci/kubectl/bin/kubectl
+fi
+
+export PATH="$PWD/.ci/kubectl/bin:$PATH"
+kubectl version --client
+'''
+        }
+    }
         stage('Install Dependencies') {
             steps {
                 sh 'export PATH="$PWD/.ci/node/bin:$PATH" && npm ci'
@@ -79,15 +108,80 @@ npm -v
                 sh 'export PATH="$PWD/.ci/node/bin:$PATH" && npm run build'
             }
         }
-        stage('Build Docker Image') {
-            steps {
-                sh 'docker build -f .Dockerfile -t ${DOCKER_IMAGE}:${BUILD_NUMBER} -t ${DOCKER_IMAGE}:latest .'
-            }
-        }
-        stage('Push Docker Image') {
+        stage('Build And Push Image (Kaniko)') {
             steps {
                 withCredentials([usernamePassword(credentialsId: params.DOCKER_CREDENTIALS_ID, usernameVariable: 'DOCKERHUB_USERNAME', passwordVariable: 'DOCKERHUB_TOKEN')]) {
-                    sh 'sh ./jenkins/scripts/deliver.sh'
+                    sh '''#!/bin/sh
+set -eu
+
+export PATH="$PWD/.ci/kubectl/bin:$PATH"
+
+mkdir -p .ci
+
+DOCKER_AUTH="$(printf '%s:%s' "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN" | base64 | tr -d '\\n')"
+cat > .ci/kaniko-docker-config.json <<EOF
+{
+    "auths": {
+        "https://index.docker.io/v1/": {
+            "auth": "${DOCKER_AUTH}"
+        }
+    }
+}
+EOF
+
+SECRET_NAME="kaniko-docker-config-${BUILD_NUMBER}"
+POD_NAME="kaniko-build-${BUILD_NUMBER}"
+
+cleanup() {
+    kubectl -n devops-tools delete pod "${POD_NAME}" --ignore-not-found=true >/dev/null 2>&1 || true
+    kubectl -n devops-tools delete secret "${SECRET_NAME}" --ignore-not-found=true >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+
+kubectl -n devops-tools delete pod "${POD_NAME}" --ignore-not-found=true >/dev/null 2>&1 || true
+
+kubectl -n devops-tools create secret generic "$SECRET_NAME" \
+    --from-file=config.json=.ci/kaniko-docker-config.json \
+    --dry-run=client -o yaml | kubectl apply -f -
+
+cat <<EOF | kubectl -n devops-tools apply -f -
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ${POD_NAME}
+spec:
+  restartPolicy: Never
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:latest
+    args:
+    - --context=git://${GIT_REPO_URL}#refs/heads/${GIT_REF}
+    - --dockerfile=.Dockerfile
+    - --destination=${DOCKER_IMAGE}:${BUILD_NUMBER}
+    - --destination=${DOCKER_IMAGE}:latest
+    volumeMounts:
+    - name: docker-config
+      mountPath: /kaniko/.docker
+      readOnly: true
+  volumes:
+  - name: docker-config
+    secret:
+      secretName: ${SECRET_NAME}
+      items:
+      - key: config.json
+        path: config.json
+EOF
+
+kubectl -n devops-tools wait --for=condition=PodScheduled pod/${POD_NAME} --timeout=120s
+kubectl -n devops-tools logs -f pod/${POD_NAME}
+
+EXIT_CODE="$(kubectl -n devops-tools get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}')"
+
+if [ "$EXIT_CODE" != "0" ]; then
+    echo "Kaniko build failed with exit code ${EXIT_CODE}" >&2
+    exit 1
+fi
+'''
                 }
             }
         }
