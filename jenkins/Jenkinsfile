@@ -173,7 +173,17 @@ spec:
 EOF
 
 kubectl -n devops-tools wait --for=condition=PodScheduled pod/${POD_NAME} --timeout=120s
-kubectl -n devops-tools logs -f pod/${POD_NAME} || true
+
+# Avoid log attach race while container is still ContainerCreating.
+for _ in $(seq 1 90); do
+    POD_PHASE="$(kubectl -n devops-tools get pod ${POD_NAME} -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+    if [ "${POD_PHASE}" = "Running" ] || [ "${POD_PHASE}" = "Succeeded" ] || [ "${POD_PHASE}" = "Failed" ]; then
+        break
+    fi
+    sleep 2
+done
+
+kubectl -n devops-tools logs -f pod/${POD_NAME} -c kaniko || true
 
 # Wait for Kaniko pod to finish and then evaluate status.
 kubectl -n devops-tools wait --for=jsonpath='{.status.phase}'=Succeeded pod/${POD_NAME} --timeout=3600s || true
