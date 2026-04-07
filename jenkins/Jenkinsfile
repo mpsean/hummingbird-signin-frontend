@@ -173,12 +173,20 @@ spec:
 EOF
 
 kubectl -n devops-tools wait --for=condition=PodScheduled pod/${POD_NAME} --timeout=120s
-kubectl -n devops-tools logs -f pod/${POD_NAME}
+kubectl -n devops-tools logs -f pod/${POD_NAME} || true
 
-EXIT_CODE="$(kubectl -n devops-tools get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}')"
+# Wait for Kaniko pod to finish and then evaluate status.
+kubectl -n devops-tools wait --for=jsonpath='{.status.phase}'=Succeeded pod/${POD_NAME} --timeout=3600s || true
 
-if [ "$EXIT_CODE" != "0" ]; then
-    echo "Kaniko build failed with exit code ${EXIT_CODE}" >&2
+POD_PHASE="$(kubectl -n devops-tools get pod ${POD_NAME} -o jsonpath='{.status.phase}' 2>/dev/null || true)"
+EXIT_CODE="$(kubectl -n devops-tools get pod ${POD_NAME} -o jsonpath='{.status.containerStatuses[0].state.terminated.exitCode}' 2>/dev/null || true)"
+
+if [ "${POD_PHASE}" = "Failed" ]; then
+    kubectl -n devops-tools describe pod ${POD_NAME} || true
+fi
+
+if [ "${POD_PHASE}" != "Succeeded" ] || [ "${EXIT_CODE}" != "0" ]; then
+    echo "Kaniko build failed (phase=${POD_PHASE}, exit=${EXIT_CODE})" >&2
     exit 1
 fi
 '''
