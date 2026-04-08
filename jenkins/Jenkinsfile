@@ -105,7 +105,7 @@ kubectl version --client
         }
         stage('Build Application') {
             steps {
-                sh 'export PATH="$PWD/.ci/node/bin:$PATH" && npm run build'
+                sh 'export PATH="$PWD/.ci/node/bin:$PWD/node_modules/.bin:$PATH" && vite build'
             }
         }
         stage('Build And Push Image (Kaniko)') {
