@@ -115,6 +115,7 @@ sh ./jenkins/scripts/deliver.sh
         always {
             // Prevent Jenkins controller disk growth from repeated Node/Kaniko runs.
             deleteDir()
+            sh 'docker system prune -f --volumes'
         }
     }
 }
