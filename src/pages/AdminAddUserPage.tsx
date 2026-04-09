@@ -1,17 +1,24 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { authApi } from '../services/authApi'
+import { authApi, Tenant } from '../services/authApi'
 import styles from './Auth.module.css'
 
 export default function AdminAddUserPage() {
   const [form, setForm] = useState({
-    email: '', username: '', password: '', firstName: '', lastName: ''
+    email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: ''
   })
+  const [tenants, setTenants] = useState<Tenant[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  useEffect(() => {
+    authApi.getTenants()
+      .then(r => setTenants(r.data.filter(t => t.isActive)))
+      .catch(() => setError('Failed to load tenants. Please refresh.'))
+  }, [])
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
 
   const handleSubmit = async (e: FormEvent) => {
@@ -22,7 +29,7 @@ export default function AdminAddUserPage() {
     try {
       await authApi.register(form)
       setSuccess(`User "${form.username}" created successfully.`)
-      setForm({ email: '', username: '', password: '', firstName: '', lastName: '' })
+      setForm({ email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: '' })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create user.')
     } finally {
@@ -81,6 +88,21 @@ export default function AdminAddUserPage() {
             <input className={styles.input} type="password" placeholder="Min. 8 characters"
               value={form.password} onChange={set('password')} required
               minLength={8} autoComplete="new-password" />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Organization</label>
+            <select
+              className={styles.input}
+              value={form.tenantSlug}
+              onChange={set('tenantSlug')}
+              required
+            >
+              <option value="" disabled>Select organization</option>
+              {tenants.map(t => (
+                <option key={t.id} value={t.slug}>{t.name}</option>
+              ))}
+            </select>
           </div>
 
           <button className={styles.btn} type="submit" disabled={loading}>

@@ -45,8 +45,8 @@ function LoadingScreen() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <AuthProvider>
+      <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
@@ -55,7 +55,7 @@ export default function App() {
           <Route path="/admin/remove-user" element={<AdminRoute><AdminRemoveUserPage /></AdminRoute>} />
           <Route path="/admin/create-tenant" element={<AdminRoute><AdminCreateTenantPage /></AdminRoute>} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }

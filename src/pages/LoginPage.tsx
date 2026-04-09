@@ -46,10 +46,10 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.field}>
-            <label className={styles.label}>Email or Username</label>
+            <label className={styles.label}>Email</label>
             <input
               className={styles.input}
-              type="text"
+              type="email"
               placeholder="you@company.com"
               value={identifier}
               onChange={e => setIdentifier(e.target.value)}
