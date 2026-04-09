@@ -73,7 +73,13 @@ npm -v
         }
         stage('Test') {
             steps {
+                sh 'mkdir -p test-results'
                 sh 'export PATH="$PWD/.ci/node/bin:$PATH" && sh ./jenkins/scripts/test.sh'
+            }
+            post {
+                always {
+                    junit testResults: 'test-results/junit.xml', allowEmptyResults: false
+                }
             }
         }
         stage('Prune Local Build Artifacts') {
