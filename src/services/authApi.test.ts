@@ -1,7 +1,40 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import axios from 'axios'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// vi.hoisted runs before everything — lets us share state between the mock
+// factory (which is hoisted) and the rest of the test file.
+const axiosMock = vi.hoisted(() => ({
+  post: vi.fn(),
+  get: vi.fn(),
+  requestFulfilled: undefined as ((cfg: any) => any) | undefined,
+  responseRejected: undefined as ((err: any) => Promise<any>) | undefined,
+}))
+
+// Replace axios.create() with a fake instance before authApi is imported.
+vi.mock('axios', () => ({
+  default: {
+    create: () => ({
+      post: axiosMock.post,
+      get: axiosMock.get,
+      interceptors: {
+        request: {
+          use: (fulfilled: (cfg: any) => any) => {
+            axiosMock.requestFulfilled = fulfilled
+          },
+        },
+        response: {
+          use: (_: any, rejected: (err: any) => Promise<any>) => {
+            axiosMock.responseRejected = rejected
+          },
+        },
+      },
+    }),
+  },
+}))
+
+// Static import runs after vi.mock is hoisted — picks up the mock.
+import { authApi } from './authApi'
+
+// ── Fixtures ──────────────────────────────────────────────────────────────────
 
 const mockUser = {
   id: 1,
@@ -20,43 +53,34 @@ const mockAuthResponse = {
 
 // ── Setup ─────────────────────────────────────────────────────────────────────
 
-let axiosCreateSpy: ReturnType<typeof vi.spyOn>
-
-// We need a fresh module for each test so interceptors and mocks don't bleed.
 beforeEach(() => {
   localStorage.clear()
-  vi.resetModules()
+  vi.clearAllMocks()
 })
 
-afterEach(() => {
-  vi.restoreAllMocks()
-})
+// ── authApi.login ─────────────────────────────────────────────────────────────
 
-// ── Tests ─────────────────────────────────────────────────────────────────────
-
-describe('authApi — login', () => {
+describe('authApi.login', () => {
   it('POSTs to /auth/login with credentials', async () => {
-    const postSpy = vi.spyOn(axios, 'post').mockResolvedValueOnce({ data: mockAuthResponse })
+    axiosMock.post.mockResolvedValueOnce({ data: mockAuthResponse })
 
-    // Import after spying so the module picks up the spy.
-    const { authApi } = await import('./authApi')
     const res = await authApi.login({ emailOrUsername: 'testuser', password: 'secret' })
 
-    expect(postSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/auth/login'),
-      { emailOrUsername: 'testuser', password: 'secret' },
-      expect.anything(),
-    )
+    expect(axiosMock.post).toHaveBeenCalledWith('/auth/login', {
+      emailOrUsername: 'testuser',
+      password: 'secret',
+    })
     expect(res.data.token).toBe('test-jwt-token')
     expect(res.data.user.username).toBe('testuser')
   })
 })
 
-describe('authApi — register', () => {
-  it('POSTs to /auth/register with user data', async () => {
-    const postSpy = vi.spyOn(axios, 'post').mockResolvedValueOnce({ data: mockAuthResponse })
+// ── authApi.register ──────────────────────────────────────────────────────────
 
-    const { authApi } = await import('./authApi')
+describe('authApi.register', () => {
+  it('POSTs to /auth/register with user data', async () => {
+    axiosMock.post.mockResolvedValueOnce({ data: mockAuthResponse })
+
     const payload = {
       email: 'user@example.com',
       username: 'testuser',
@@ -65,67 +89,83 @@ describe('authApi — register', () => {
     }
     const res = await authApi.register(payload)
 
-    expect(postSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/auth/register'),
-      payload,
-      expect.anything(),
-    )
+    expect(axiosMock.post).toHaveBeenCalledWith('/auth/register', payload)
     expect(res.data.token).toBe('test-jwt-token')
   })
 })
 
-describe('authApi — me', () => {
-  it('GETs /auth/me', async () => {
-    const getSpy = vi.spyOn(axios, 'get').mockResolvedValueOnce({ data: mockUser })
+// ── authApi.me ────────────────────────────────────────────────────────────────
 
-    const { authApi } = await import('./authApi')
+describe('authApi.me', () => {
+  it('GETs /auth/me', async () => {
+    axiosMock.get.mockResolvedValueOnce({ data: mockUser })
+
     const res = await authApi.me()
 
-    expect(getSpy).toHaveBeenCalledWith(
-      expect.stringContaining('/auth/me'),
-      expect.anything(),
-    )
+    expect(axiosMock.get).toHaveBeenCalledWith('/auth/me')
     expect(res.data.email).toBe('user@example.com')
-  })
-
-  it('attaches Bearer token from localStorage', async () => {
-    localStorage.setItem('token', 'stored-token')
-
-    // Capture the request config to inspect the Authorization header.
-    let capturedConfig: Record<string, unknown> = {}
-    vi.spyOn(axios, 'get').mockImplementationOnce((_url, config) => {
-      capturedConfig = config as Record<string, unknown>
-      return Promise.resolve({ data: mockUser })
-    })
-
-    const { authApi } = await import('./authApi')
-    await authApi.me()
-
-    // The request interceptor in authApi merges the token into headers.
-    // We verify it was present in localStorage at call time (interceptor reads it).
-    expect(localStorage.getItem('token')).toBe('stored-token')
   })
 })
 
-describe('authApi — 401 interceptor', () => {
-  it('removes token from localStorage on 401 response', async () => {
+// ── authApi.changePassword ────────────────────────────────────────────────────
+
+describe('authApi.changePassword', () => {
+  it('POSTs to /auth/change-password', async () => {
+    axiosMock.post.mockResolvedValueOnce({ data: {} })
+
+    await authApi.changePassword({ currentPassword: 'old', newPassword: 'new' })
+
+    expect(axiosMock.post).toHaveBeenCalledWith('/auth/change-password', {
+      currentPassword: 'old',
+      newPassword: 'new',
+    })
+  })
+})
+
+// ── Request interceptor ───────────────────────────────────────────────────────
+
+describe('request interceptor', () => {
+  it('attaches Bearer token when one is in localStorage', () => {
+    localStorage.setItem('token', 'stored-token')
+
+    const config = { headers: {} as Record<string, string> }
+    const result = axiosMock.requestFulfilled!(config)
+
+    expect(result.headers.Authorization).toBe('Bearer stored-token')
+  })
+
+  it('does not add Authorization header when localStorage has no token', () => {
+    const config = { headers: {} as Record<string, string> }
+    const result = axiosMock.requestFulfilled!(config)
+
+    expect(result.headers.Authorization).toBeUndefined()
+  })
+})
+
+// ── Response interceptor ──────────────────────────────────────────────────────
+
+describe('response interceptor — 401', () => {
+  beforeEach(() => {
+    Object.defineProperty(window, 'location', { value: { href: '' }, writable: true })
+  })
+
+  it('removes token from localStorage on 401', async () => {
     localStorage.setItem('token', 'expired-token')
 
-    // Simulate a 401 from the server.
-    const axiosError = Object.assign(new Error('Unauthorized'), {
-      response: { status: 401 },
-    })
-    vi.spyOn(axios, 'get').mockRejectedValueOnce(axiosError)
-
-    // Suppress the window.location.href assignment in jsdom.
-    Object.defineProperty(window, 'location', {
-      value: { href: '' },
-      writable: true,
-    })
-
-    const { authApi } = await import('./authApi')
-    await authApi.me().catch(() => {})
+    await axiosMock.responseRejected!({ response: { status: 401 } }).catch(() => {})
 
     expect(localStorage.getItem('token')).toBeNull()
+  })
+
+  it('redirects to /login on 401', async () => {
+    await axiosMock.responseRejected!({ response: { status: 401 } }).catch(() => {})
+
+    expect(window.location.href).toBe('/login')
+  })
+
+  it('re-throws errors that are not 401', async () => {
+    const error = { response: { status: 500 } }
+
+    await expect(axiosMock.responseRejected!(error)).rejects.toEqual(error)
   })
 })
