@@ -103,14 +103,25 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
-docker build \
+echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
+
+# Ensure a multi-platform capable builder exists.
+docker buildx inspect multiarch-builder >/dev/null 2>&1 \
+  || docker buildx create --name multiarch-builder --use --bootstrap
+docker buildx use multiarch-builder
+
+docker buildx build \
+  --platform linux/amd64,linux/arm64 \
+  --build-arg VITE_API_URL=http://signin.hmmbird.xyz \
+  --build-arg VITE_API_URL=http://hummingbird-api.hummingbird-api.svc.cluster.local:5000 \
   -f .Dockerfile \
   -t "${DOCKER_IMAGE}:${BUILD_NUMBER}" \
   -t "${DOCKER_IMAGE}:latest" \
+  --push \
   .
 
-export IMAGE_TAG="${BUILD_NUMBER}"
-sh ./jenkins/scripts/deliver.sh
+docker logout
+echo 'Multi-platform image pushed successfully.'
 '''
                 }
             }
