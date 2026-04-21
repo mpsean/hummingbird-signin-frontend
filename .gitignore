@@ -40,6 +40,7 @@ pnpm-debug.log*
 # Vite
 vite.config.ts
 
+.DS_Store
 # Runtime data
 pids
 *.pid
