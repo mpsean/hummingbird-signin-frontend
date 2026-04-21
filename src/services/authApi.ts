@@ -62,7 +62,7 @@ export interface AuthResponse {
 export const authApi = {
   getTenants: () => api.get<Tenant[]>('api/tenants'),
 
-  getHbTenants: () => fetch(`http://hummingbird-api.hummingbird-api.svc.cluster.local:5000/api/admin/tenants`, {
+  getHbTenants: () => fetch(`http://admin.hmmbird.xyz/api/admin/tenants`, {
     headers: { 'X-Admin-Key': 'hb-admin-dev-key' }
   }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() as Promise<HbTenant[]> }),
 
