@@ -25,7 +25,7 @@ export default function AdminCreateTenantPage() {
       await authApi.createTenant({
         slug: t.subdomain,
         name: t.name,
-        frontendUrl: `https://${t.subdomain}.hmmingbird.xyz`
+        frontendUrl: `https://${t.subdomain}.hmmbird.xyz`
       })
       setSyncState(s => ({ ...s, [t.id]: 'done' }))
       setSyncMsg(m => ({ ...m, [t.id]: 'Added' }))
