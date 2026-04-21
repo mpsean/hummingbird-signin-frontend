@@ -5,7 +5,7 @@ import styles from './Auth.module.css'
 
 export default function AdminAddUserPage() {
   const [form, setForm] = useState({
-    email: '', username: '', password: '', firstName: '', lastName: ''
+    email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: 'default'
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -22,7 +22,7 @@ export default function AdminAddUserPage() {
     try {
       await authApi.register(form)
       setSuccess(`User "${form.username}" created successfully.`)
-      setForm({ email: '', username: '', password: '', firstName: '', lastName: '' })
+      setForm({ email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: 'default' })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create user.')
     } finally {
@@ -81,6 +81,12 @@ export default function AdminAddUserPage() {
             <input className={styles.input} type="password" placeholder="Min. 8 characters"
               value={form.password} onChange={set('password')} required
               minLength={8} autoComplete="new-password" />
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label}>Tenant Slug</label>
+            <input className={styles.input} type="text" placeholder="default"
+              value={form.tenantSlug} onChange={set('tenantSlug')} required autoComplete="off" />
           </div>
 
           <button className={styles.btn} type="submit" disabled={loading}>
