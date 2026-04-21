@@ -11,6 +11,10 @@ export default function DashboardPage() {
     navigate('/login')
   }
 
+  const tenantSlug = user?.email?.includes('@')
+    ? user.email.slice(user.email.indexOf('@') + 1).split('.')[0]
+    : undefined
+
   const initials = [user?.firstName, user?.lastName]
     .filter(Boolean).map(s => s![0].toUpperCase()).join('') ||
     user?.username.slice(0, 2).toUpperCase() || '?'
@@ -63,7 +67,7 @@ export default function DashboardPage() {
             </Link>
           </div>
         ) : (
-          <a href="https://www.hmmingbird.xyz/home" target="_blank" rel="noreferrer" className={styles.appBtn}>
+          <a href={`http://${tenantSlug}.hmmbird.xyz`} target="_blank" rel="noreferrer" className={styles.appBtn}>
             <div className={styles.navBrand}>
               <span className={styles.brandIcon}>HM</span>
               <span>Hummingbird</span>
