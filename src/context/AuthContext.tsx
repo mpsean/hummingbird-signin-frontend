@@ -27,6 +27,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await authApi.login({ emailOrUsername, password })
     localStorage.setItem('token', data.token)
     setUser(data.user)
+
+    // Redirect to tenant frontend with token — use ?redirect param if present
+    const params = new URLSearchParams(window.location.search)
+    const redirectTo = params.get('redirect') || data.redirectUrl
+    window.location.href = `${redirectTo}${redirectTo.includes('?') ? '&' : '?'}token=${data.token}`
   }
 
   const logout = () => {

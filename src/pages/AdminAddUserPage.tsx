@@ -1,17 +1,24 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { authApi } from '../services/authApi'
+import { authApi, Tenant } from '../services/authApi'
 import styles from './Auth.module.css'
 
 export default function AdminAddUserPage() {
   const [form, setForm] = useState({
     email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: 'default'
   })
+  const [tenants, setTenants] = useState<Tenant[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  useEffect(() => {
+    authApi.getTenants()
+      .then(r => setTenants(r.data.filter(t => t.isActive)))
+      .catch(() => setError('Failed to load tenants. Please refresh.'))
+  }, [])
+
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
 
   const handleSubmit = async (e: FormEvent) => {

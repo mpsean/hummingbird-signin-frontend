@@ -1,9 +1,7 @@
 import axios from 'axios'
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api'
-  //       ↑ uses env var in production, falls back to Vite proxy in dev
-})
+const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5001').replace(/\/$/, '')
+const api = axios.create({ baseURL: `${BASE}/api` })
 
 // Attach JWT token to every request
 api.interceptors.request.use(cfg => {
@@ -24,6 +22,24 @@ api.interceptors.response.use(
   }
 )
 
+export interface Tenant {
+  id: number
+  slug: string
+  name: string
+  frontendUrl: string
+  isActive: boolean
+  createdAt: string
+}
+
+export interface HbTenant {
+  id: number
+  name: string
+  subdomain: string
+  databaseName: string
+  isActive: boolean
+  createdAt: string
+}
+
 export interface User {
   id: number
   email: string
@@ -39,10 +55,17 @@ export interface AuthResponse {
   token: string
   tokenType: string
   expiresIn: number
+  redirectUrl: string
   user: User
 }
 
 export const authApi = {
+  getTenants: () => api.get<Tenant[]>('/tenants'),
+
+  getHbTenants: () => fetch('http://localhost:5000/api/admin/tenants', {
+    headers: { 'X-Admin-Key': 'hb-admin-dev-key' }
+  }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() as Promise<HbTenant[]> }),
+
   register: (data: {
     email: string; username: string; password: string;
     firstName?: string; lastName?: string; tenantSlug?: string

@@ -1,30 +1,37 @@
-import { useState, FormEvent } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { authApi } from '../services/authApi'
+import { authApi, HbTenant } from '../services/authApi'
 import styles from './Auth.module.css'
 
+type SyncState = 'idle' | 'loading' | 'done' | 'error'
+
 export default function AdminCreateTenantPage() {
-  const [form, setForm] = useState({ slug: '', name: '', frontendUrl: '' })
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [tenants, setTenants] = useState<HbTenant[]>([])
+  const [loadError, setLoadError] = useState('')
+  const [fetching, setFetching] = useState(true)
+  const [syncState, setSyncState] = useState<Record<number, SyncState>>({})
+  const [syncMsg, setSyncMsg] = useState<Record<number, string>>({})
 
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }))
+  useEffect(() => {
+    authApi.getHbTenants()
+      .then(data => setTenants(data.filter(t => t.isActive)))
+      .catch(() => setLoadError('Failed to load tenants from HummingbirdHR.'))
+      .finally(() => setFetching(false))
+  }, [])
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
-    setLoading(true)
+  const addToSignin = async (t: HbTenant) => {
+    setSyncState(s => ({ ...s, [t.id]: 'loading' }))
     try {
-      await authApi.createTenant(form)
-      setSuccess(`Tenant "${form.name}" created successfully.`)
-      setForm({ slug: '', name: '', frontendUrl: '' })
+      await authApi.createTenant({
+        slug: t.subdomain,
+        name: t.name,
+        frontendUrl: `https://${t.subdomain}.hmmingbird.xyz`
+      })
+      setSyncState(s => ({ ...s, [t.id]: 'done' }))
+      setSyncMsg(m => ({ ...m, [t.id]: 'Added' }))
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create tenant.')
-    } finally {
-      setLoading(false)
+      setSyncState(s => ({ ...s, [t.id]: 'error' }))
+      setSyncMsg(m => ({ ...m, [t.id]: err.response?.data?.message || 'Failed' }))
     }
   }
 
@@ -34,64 +41,77 @@ export default function AdminCreateTenantPage() {
       <div className={styles.orb1} />
       <div className={styles.orb2} />
 
-      <div className={styles.card}>
+      <div className={styles.card} style={{ maxWidth: 560 }}>
         <div className={styles.brand}>
           <div className={styles.brandIcon}>HM</div>
           <span className={styles.brandName}>Hummingbird</span>
         </div>
 
         <div className={styles.header}>
-          <h1 className={styles.title}>New tenant</h1>
-          <p className={styles.subtitle}>Admin — create a tenant</p>
+          <h1 className={styles.title}>Sync tenants</h1>
+          <p className={styles.subtitle}>Admin — import tenants from HummingbirdHR</p>
         </div>
 
-        {error && <div className={styles.errorBanner}>{error}</div>}
-        {success && <div className={styles.successBanner}>{success}</div>}
+        {loadError && <div className={styles.errorBanner}>{loadError}</div>}
 
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <div className={styles.field}>
-            <label className={styles.label}>Tenant name</label>
-            <input
-              className={styles.input}
-              type="text"
-              placeholder="Hotel Grand Bangkok"
-              value={form.name}
-              onChange={set('name')}
-              required
-              autoComplete="off"
-            />
+        {fetching && !loadError && (
+          <p style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>Loading tenants…</p>
+        )}
+
+        {!fetching && !loadError && tenants.length === 0 && (
+          <p style={{ color: 'var(--text-2)', fontSize: '0.9rem' }}>No active tenants found.</p>
+        )}
+
+        {tenants.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+            {tenants.map(t => (
+              <div key={t.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.75rem 1rem',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+              }}>
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: '0.9rem', color: 'var(--text)' }}>
+                    {t.name}
+                  </div>
+                  <div style={{ color: 'var(--text-2)', fontSize: '0.78rem', marginTop: 2 }}>
+                    {t.subdomain}
+                  </div>
+                </div>
+
+                {syncState[t.id] === 'done' && (
+                  <span style={{ color: '#34d399', fontSize: '0.85rem', fontWeight: 500 }}>
+                    {syncMsg[t.id]}
+                  </span>
+                )}
+                {syncState[t.id] === 'error' && (
+                  <span style={{ color: 'var(--error)', fontSize: '0.82rem', maxWidth: 140, textAlign: 'right' }}>
+                    {syncMsg[t.id]}
+                  </span>
+                )}
+                {(syncState[t.id] === 'idle' || syncState[t.id] === undefined) && (
+                  <button
+                    className={styles.btn}
+                    style={{ margin: 0, padding: '0.4rem 0.9rem', fontSize: '0.85rem', minHeight: 'unset' }}
+                    onClick={() => addToSignin(t)}
+                  >
+                    Add →
+                  </button>
+                )}
+                {syncState[t.id] === 'loading' && (
+                  <button className={styles.btn}
+                    style={{ margin: 0, padding: '0.4rem 0.9rem', minHeight: 'unset' }}
+                    disabled
+                  >
+                    <span className={styles.spinner} />
+                  </button>
+                )}
+              </div>
+            ))}
           </div>
-
-          <div className={styles.field}>
-            <label className={styles.label}>Slug</label>
-            <input
-              className={styles.input}
-              type="text"
-              placeholder="hotel-grand"
-              value={form.slug}
-              onChange={set('slug')}
-              required
-              autoComplete="off"
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label}>Frontend URL</label>
-            <input
-              className={styles.input}
-              type="url"
-              placeholder="https://grand.yourdomain.com"
-              value={form.frontendUrl}
-              onChange={set('frontendUrl')}
-              required
-              autoComplete="off"
-            />
-          </div>
-
-          <button className={styles.btn} type="submit" disabled={loading}>
-            {loading ? <span className={styles.spinner} /> : 'Create tenant'}
-          </button>
-        </form>
+        )}
 
         <p className={styles.footer}>
           <Link to="/dashboard">Back to dashboard</Link>
