@@ -62,28 +62,28 @@ export interface AuthResponse {
 export const authApi = {
   getTenants: () => api.get<Tenant[]>('/tenants'),
 
-  getHbTenants: () => fetch('http://localhost:5000/api/admin/tenants', {
+  getHbTenants: () => fetch(`${BASE}/api/admin/tenants`, {
     headers: { 'X-Admin-Key': 'hb-admin-dev-key' }
   }).then(r => { if (!r.ok) throw new Error(r.statusText); return r.json() as Promise<HbTenant[]> }),
 
   register: (data: {
     email: string; username: string; password: string;
     firstName?: string; lastName?: string; tenantSlug?: string
-  }) => api.post<AuthResponse>('api/auth/register', data),
+  }) => api.post<AuthResponse>('auth/register', data),
 
   login: (data: { emailOrUsername: string; password: string }) =>
-    api.post<AuthResponse>('api/auth/login', data),
+    api.post<AuthResponse>('auth/login', data),
 
-  me: () => api.get<User>('api/auth/me'),
+  me: () => api.get<User>('auth/me'),
 
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
-    api.post('api/auth/change-password', data),
+    api.post('auth/change-password', data),
 
   deleteUser: (username: string) =>
-    api.delete(`api/users/${username}`),
+    api.delete(`users/${username}`),
 
   createTenant: (data: { slug: string; name: string; frontendUrl: string }) =>
-    api.post('api/tenants', data),
+    api.post('tenants', data),
 }
 
 export default api
