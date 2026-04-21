@@ -71,8 +71,13 @@ export const authApi = {
     firstName?: string; lastName?: string; tenantSlug?: string
   }) => api.post<AuthResponse>('api/auth/register', data),
 
-  login: (data: { emailOrUsername: string; password: string }) =>
-    api.post<AuthResponse>('api/auth/login', data),
+  login: (data: { emailOrUsername: string; password: string }) => {
+    const atIndex = data.emailOrUsername.indexOf('@')
+    const tenantSlug = atIndex !== -1
+      ? data.emailOrUsername.slice(atIndex + 1).split('.')[0]
+      : undefined
+    return api.post<AuthResponse>('api/auth/login', { ...data, tenantSlug })
+  },
 
   me: () => api.get<User>('api/auth/me'),
 
