@@ -1,20 +1,19 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 
-// vi.hoisted runs before everything — lets us share state between the mock
-// factory (which is hoisted) and the rest of the test file.
 const axiosMock = vi.hoisted(() => ({
   post: vi.fn(),
   get: vi.fn(),
+  delete: vi.fn(),
   requestFulfilled: undefined as ((cfg: any) => any) | undefined,
   responseRejected: undefined as ((err: any) => Promise<any>) | undefined,
 }))
 
-// Replace axios.create() with a fake instance before authApi is imported.
 vi.mock('axios', () => ({
   default: {
     create: () => ({
       post: axiosMock.post,
       get: axiosMock.get,
+      delete: axiosMock.delete,
       interceptors: {
         request: {
           use: (fulfilled: (cfg: any) => any) => {
@@ -31,7 +30,6 @@ vi.mock('axios', () => ({
   },
 }))
 
-// Static import runs after vi.mock is hoisted — picks up the mock.
 import { authApi } from './authApi'
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -51,8 +49,6 @@ const mockAuthResponse = {
   user: mockUser,
 }
 
-// ── Setup ─────────────────────────────────────────────────────────────────────
-
 beforeEach(() => {
   localStorage.clear()
   vi.clearAllMocks()
@@ -61,12 +57,12 @@ beforeEach(() => {
 // ── authApi.login ─────────────────────────────────────────────────────────────
 
 describe('authApi.login', () => {
-  it('POSTs to /auth/login with credentials', async () => {
+  it('POSTs to api/auth/login with credentials', async () => {
     axiosMock.post.mockResolvedValueOnce({ data: mockAuthResponse })
 
     const res = await authApi.login({ emailOrUsername: 'testuser', password: 'secret' })
 
-    expect(axiosMock.post).toHaveBeenCalledWith('/auth/login', {
+    expect(axiosMock.post).toHaveBeenCalledWith('api/auth/login', {
       emailOrUsername: 'testuser',
       password: 'secret',
     })
@@ -78,7 +74,7 @@ describe('authApi.login', () => {
 // ── authApi.register ──────────────────────────────────────────────────────────
 
 describe('authApi.register', () => {
-  it('POSTs to /auth/register with user data', async () => {
+  it('POSTs to api/auth/register with user data', async () => {
     axiosMock.post.mockResolvedValueOnce({ data: mockAuthResponse })
 
     const payload = {
@@ -89,7 +85,7 @@ describe('authApi.register', () => {
     }
     const res = await authApi.register(payload)
 
-    expect(axiosMock.post).toHaveBeenCalledWith('/auth/register', payload)
+    expect(axiosMock.post).toHaveBeenCalledWith('api/auth/register', payload)
     expect(res.data.token).toBe('test-jwt-token')
   })
 })
@@ -97,12 +93,12 @@ describe('authApi.register', () => {
 // ── authApi.me ────────────────────────────────────────────────────────────────
 
 describe('authApi.me', () => {
-  it('GETs /auth/me', async () => {
+  it('GETs api/auth/me', async () => {
     axiosMock.get.mockResolvedValueOnce({ data: mockUser })
 
     const res = await authApi.me()
 
-    expect(axiosMock.get).toHaveBeenCalledWith('/auth/me')
+    expect(axiosMock.get).toHaveBeenCalledWith('api/auth/me')
     expect(res.data.email).toBe('user@example.com')
   })
 })
@@ -110,15 +106,40 @@ describe('authApi.me', () => {
 // ── authApi.changePassword ────────────────────────────────────────────────────
 
 describe('authApi.changePassword', () => {
-  it('POSTs to /auth/change-password', async () => {
+  it('POSTs to api/auth/change-password', async () => {
     axiosMock.post.mockResolvedValueOnce({ data: {} })
 
     await authApi.changePassword({ currentPassword: 'old', newPassword: 'new' })
 
-    expect(axiosMock.post).toHaveBeenCalledWith('/auth/change-password', {
+    expect(axiosMock.post).toHaveBeenCalledWith('api/auth/change-password', {
       currentPassword: 'old',
       newPassword: 'new',
     })
+  })
+})
+
+// ── authApi.deleteUser ────────────────────────────────────────────────────────
+
+describe('authApi.deleteUser', () => {
+  it('DELETEs api/users/:username', async () => {
+    axiosMock.delete.mockResolvedValueOnce({ data: {} })
+
+    await authApi.deleteUser('testuser')
+
+    expect(axiosMock.delete).toHaveBeenCalledWith('api/users/testuser')
+  })
+})
+
+// ── authApi.createTenant ──────────────────────────────────────────────────────
+
+describe('authApi.createTenant', () => {
+  it('POSTs to api/tenants with tenant data', async () => {
+    axiosMock.post.mockResolvedValueOnce({ data: {} })
+
+    const payload = { slug: 'acme', name: 'Acme Corp', frontendUrl: 'https://acme.example.com' }
+    await authApi.createTenant(payload)
+
+    expect(axiosMock.post).toHaveBeenCalledWith('api/tenants', payload)
   })
 })
 
@@ -145,10 +166,6 @@ describe('request interceptor', () => {
 // ── Response interceptor ──────────────────────────────────────────────────────
 
 describe('response interceptor — 401', () => {
-  beforeEach(() => {
-    Object.defineProperty(window, 'location', { value: { href: '' }, writable: true })
-  })
-
   it('removes token from localStorage on 401', async () => {
     localStorage.setItem('token', 'expired-token')
 
@@ -157,10 +174,10 @@ describe('response interceptor — 401', () => {
     expect(localStorage.getItem('token')).toBeNull()
   })
 
-  it('redirects to /login on 401', async () => {
-    await axiosMock.responseRejected!({ response: { status: 401 } }).catch(() => {})
+  it('re-throws the error after a 401', async () => {
+    const error = { response: { status: 401 } }
 
-    expect(window.location.href).toBe('/login')
+    await expect(axiosMock.responseRejected!(error)).rejects.toEqual(error)
   })
 
   it('re-throws errors that are not 401', async () => {
