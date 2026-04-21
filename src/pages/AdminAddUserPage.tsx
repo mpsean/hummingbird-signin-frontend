@@ -5,7 +5,7 @@ import styles from './Auth.module.css'
 
 export default function AdminAddUserPage() {
   const [form, setForm] = useState({
-    email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: ''
+    email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: 'default'
   })
   const [tenants, setTenants] = useState<Tenant[]>([])
   const [error, setError] = useState('')
@@ -29,7 +29,7 @@ export default function AdminAddUserPage() {
     try {
       await authApi.register(form)
       setSuccess(`User "${form.username}" created successfully.`)
-      setForm({ email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: '' })
+      setForm({ email: '', username: '', password: '', firstName: '', lastName: '', tenantSlug: 'default' })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to create user.')
     } finally {
@@ -91,18 +91,9 @@ export default function AdminAddUserPage() {
           </div>
 
           <div className={styles.field}>
-            <label className={styles.label}>Organization</label>
-            <select
-              className={styles.input}
-              value={form.tenantSlug}
-              onChange={set('tenantSlug')}
-              required
-            >
-              <option value="" disabled>Select organization</option>
-              {tenants.map(t => (
-                <option key={t.id} value={t.slug}>{t.name}</option>
-              ))}
-            </select>
+            <label className={styles.label}>Tenant Slug</label>
+            <input className={styles.input} type="text" placeholder="default"
+              value={form.tenantSlug} onChange={set('tenantSlug')} required autoComplete="off" />
           </div>
 
           <button className={styles.btn} type="submit" disabled={loading}>
