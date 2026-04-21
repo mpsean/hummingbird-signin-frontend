@@ -133,7 +133,7 @@ trap 'docker buildx rm "${BUILDER_NAME}" 2>/dev/null || true' EXIT
 
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  --build-arg VITE_API_URL=http://signin-api.hummingbird-signin.svc.cluster.local:5001 \
+  --build-arg VITE_API_URL=http://signin.hmmbird.xyz \
   -f .Dockerfile \
   -t "${DOCKER_IMAGE}:${BUILD_NUMBER}" \
   -t "${DOCKER_IMAGE}:latest" \

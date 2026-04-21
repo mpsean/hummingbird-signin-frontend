@@ -77,12 +77,12 @@ beforeEach(() => {
 // ── authApi.getTenants ────────────────────────────────────────────────────────
 
 describe('authApi.getTenants', () => {
-  it('GETs /tenants', async () => {
+  it('GETs api/tenants', async () => {
     axiosMock.get.mockResolvedValueOnce({ data: [mockTenant] })
 
     const res = await authApi.getTenants()
 
-    expect(axiosMock.get).toHaveBeenCalledWith('/tenants')
+    expect(axiosMock.get).toHaveBeenCalledWith('api/tenants')
     expect(res.data[0].slug).toBe('acme')
   })
 })
@@ -120,12 +120,12 @@ describe('authApi.getHbTenants', () => {
 // ── authApi.login ─────────────────────────────────────────────────────────────
 
 describe('authApi.login', () => {
-  it('POSTs to auth/login with credentials', async () => {
+  it('POSTs to api/auth/login with credentials', async () => {
     axiosMock.post.mockResolvedValueOnce({ data: mockAuthResponse })
 
     const res = await authApi.login({ emailOrUsername: 'testuser', password: 'secret' })
 
-    expect(axiosMock.post).toHaveBeenCalledWith('auth/login', {
+    expect(axiosMock.post).toHaveBeenCalledWith('api/auth/login', {
       emailOrUsername: 'testuser',
       password: 'secret',
     })
@@ -148,7 +148,7 @@ describe('authApi.register', () => {
     }
     const res = await authApi.register(payload)
 
-    expect(axiosMock.post).toHaveBeenCalledWith('auth/register', payload)
+    expect(axiosMock.post).toHaveBeenCalledWith('api/auth/register', payload)
     expect(res.data.token).toBe('test-jwt-token')
   })
 })
@@ -161,7 +161,7 @@ describe('authApi.me', () => {
 
     const res = await authApi.me()
 
-    expect(axiosMock.get).toHaveBeenCalledWith('auth/me')
+    expect(axiosMock.get).toHaveBeenCalledWith('api/auth/me')
     expect(res.data.email).toBe('user@example.com')
   })
 })
@@ -169,12 +169,12 @@ describe('authApi.me', () => {
 // ── authApi.changePassword ────────────────────────────────────────────────────
 
 describe('authApi.changePassword', () => {
-  it('POSTs to auth/change-password', async () => {
+  it('POSTs to api/auth/change-password', async () => {
     axiosMock.post.mockResolvedValueOnce({ data: {} })
 
     await authApi.changePassword({ currentPassword: 'old', newPassword: 'new' })
 
-    expect(axiosMock.post).toHaveBeenCalledWith('auth/change-password', {
+    expect(axiosMock.post).toHaveBeenCalledWith('api/auth/change-password', {
       currentPassword: 'old',
       newPassword: 'new',
     })
@@ -184,12 +184,12 @@ describe('authApi.changePassword', () => {
 // ── authApi.deleteUser ────────────────────────────────────────────────────────
 
 describe('authApi.deleteUser', () => {
-  it('DELETEs users/:username', async () => {
+  it('DELETEs api/users/:username', async () => {
     axiosMock.delete.mockResolvedValueOnce({ data: {} })
 
     await authApi.deleteUser('testuser')
 
-    expect(axiosMock.delete).toHaveBeenCalledWith('users/testuser')
+    expect(axiosMock.delete).toHaveBeenCalledWith('api/users/testuser')
   })
 })
 
@@ -202,7 +202,7 @@ describe('authApi.createTenant', () => {
     const payload = { slug: 'acme', name: 'Acme Corp', frontendUrl: 'https://acme.example.com' }
     await authApi.createTenant(payload)
 
-    expect(axiosMock.post).toHaveBeenCalledWith('tenants', payload)
+    expect(axiosMock.post).toHaveBeenCalledWith('api/tenants', payload)
   })
 })
 
