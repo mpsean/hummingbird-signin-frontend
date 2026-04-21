@@ -103,12 +103,33 @@ if ! command -v docker >/dev/null 2>&1; then
     exit 1
 fi
 
+# Install docker buildx plugin if not present.
+if ! docker buildx version >/dev/null 2>&1; then
+    echo 'docker buildx not found — installing...'
+    ARCH="$(uname -m)"
+    case "${ARCH}" in
+        x86_64)  BUILDX_ARCH='amd64' ;;
+        aarch64|arm64) BUILDX_ARCH='arm64' ;;
+        *) echo "Unsupported architecture: ${ARCH}" >&2; exit 1 ;;
+    esac
+    BUILDX_VERSION="$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest \
+        | grep '"tag_name"' | head -1 | cut -d'"' -f4)"
+    mkdir -p /usr/local/lib/docker/cli-plugins
+    curl -fsSL "https://github.com/docker/buildx/releases/download/${BUILDX_VERSION}/buildx-${BUILDX_VERSION}.linux-${BUILDX_ARCH}" \
+        -o /usr/local/lib/docker/cli-plugins/docker-buildx
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+    echo "Installed docker buildx ${BUILDX_VERSION}"
+fi
+
+# Register QEMU emulators for cross-platform builds.
+docker run --rm --privileged tonistiigi/binfmt --install all
+
 echo "${DOCKERHUB_TOKEN}" | docker login -u "${DOCKERHUB_USERNAME}" --password-stdin
 
-# Ensure a multi-platform capable builder exists.
-docker buildx inspect multiarch-builder >/dev/null 2>&1 \
-  || docker buildx create --name multiarch-builder --use --bootstrap
-docker buildx use multiarch-builder
+# Create a fresh multi-platform builder for this build.
+BUILDER_NAME="ci-builder-${BUILD_NUMBER}"
+docker buildx create --name "${BUILDER_NAME}" --use --bootstrap
+trap 'docker buildx rm "${BUILDER_NAME}" 2>/dev/null || true' EXIT
 
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
